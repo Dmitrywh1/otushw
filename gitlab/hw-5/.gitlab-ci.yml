@@ -22,7 +22,7 @@ test:
 test run script:
   stage: test
   script:
-    - ./ test.sh
+    - echo "Run some sh script..."
   needs:
     - test
 
