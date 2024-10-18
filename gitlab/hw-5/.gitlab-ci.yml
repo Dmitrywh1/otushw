@@ -1,0 +1,36 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  AWS_ECR_REPOSITORY: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+default:
+  tags:
+    - docker
+
+test:
+  stage: test
+  before_script: 
+    - echo "Prepare test data..."
+  script:
+    - echo "Run tests..."
+  after_script:
+    - echo "Clean..."
+
+build:
+  stage: build
+  before_script:
+    - echo "Docker login with $AWS_ECR_REPOSITORY..."
+  script:
+    - echo "Build docker image..."
+  after_script:
+    - echo "Push to ECR..."
+
+deploy:
+  stage: deploy
+  before_script:
+    - echo "Setup ssh setting for docker context..."
+  script:
+    - echo "Deploy docker in remote host..."
