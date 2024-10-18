@@ -19,18 +19,40 @@ test:
   after_script:
     - echo "Clean..."
 
-build:
-  stage: build
+test run script:
+  stage: test
+  script:
+    - ./ test.sh
+  needs:
+    - test
+
+.config:
   before_script:
     - echo "Docker login with $AWS_ECR_REPOSITORY..."
+    - echo "Setup ssh setting for docker context..."    
+
+build:
+  stage: build
+  extends: .config
   script:
     - echo "Build docker image..."
   after_script:
-    - echo "Push to ECR..."
+    - echo "Push to ECR..." 
 
-deploy:
+deploy dev:
   stage: deploy
-  before_script:
-    - echo "Setup ssh setting for docker context..."
+  extends: .config
   script:
-    - echo "Deploy docker in remote host..."
+    - echo "Deploy docker in dev..."
+
+deploy test:
+  stage: deploy
+  extends: .config
+  script:
+    - echo "Deploy docker in test..."
+
+deploy prod:
+  stage: deploy
+  extends: .config
+  script:
+    - echo "Deploy docker in prod..."
