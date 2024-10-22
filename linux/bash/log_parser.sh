@@ -2,54 +2,56 @@
 
 set -eu
 
-date="$(date -u +"[%d/%b/%Y:%H:%M:%S" -d "5 minute ago")"
-log_files=("/var/log/nginx/access.log" "/var/log/nginx/access.log")
+log_files=("access.log" "error.log")
 
 analyze_logs() {
-    local log_file="$1"
-    local date="$2"
-    local count=$(awk -v date="$date" '$4 <= date {print}' $log_file | wc -l)
+    #for awk inspect in *.log
+    local now="$(date -u +"[%d/%b/%Y:%H:%M:%S")"
+    local five_minutes_ago="$(date -u -d "5 minutes ago" +"[%d/%b/%Y:%H:%M:%S")"
+    local log_file=$(awk -v now="$now" -v five_minutes_ago="$five_minutes_ago" '$4 <= now && $4 >= five_minutes_ago {print}' $1)
+    local count=$(echo "$log_file" | wc -w)
+    #for report text
     local now=$(date +"%m-%d-%Y %H:%M:%S")
     local ago=$(date -d "5 minute ago" +"%m-%d-%Y %H:%M:%S")
     local recieve_date="$ago - $now"
 
     if [ "$count" -eq 0 ]; then
         cat <<EOF
-Report $recieve_date on $log_file
-No events in $log_file
+Report $recieve_date on $1
+No events in $1
 EOF
     else
-        echo "Report $recieve_date on $log_file"
+        echo "Report $recieve_date on $1"
         echo "Top 10 popular ip"
         {
             echo "count ip"
-            awk '{ print $1 }' "$log_file" | uniq -c | sort -r
+            echo "$log_file" | awk '{ print $1 }' | uniq -c | sort -r
         } | awk '{ print $2, $1 }' | head -n 10
 
         echo "Most popular endpoint"
         {
             echo "count endpoint"
-            grep -oP "\/\w*(?= HTTP)" "$log_file" | uniq -c
+            echo "$log_file" | grep -oP "\/\w*(?= HTTP)" | uniq -c
         } | awk '{ print $2, $1 }' | column -t
         echo "Most popular response codes"
         {
             echo "count response_code"
-            grep -oP "\d{3}(?= \d+)" "$log_file" | uniq -c
+            echo "$log_file" | grep -oP "\d{3}(?= \d+)" | uniq -c
         } | awk '{ print $2, $1 }' | column -t
         echo "Error codes"
-        if [ $(grep -oP "(4..|5..)(?= \d+)" "$log_file" | wc -l) -eq 0 ]; then
+        if [ $(echo "$log_file" |grep -oP "(4..|5..)(?= \d+)"| wc -l) -eq 0 ]; then
             echo "There were no HTTP errors"
         else
             {
                 echo "count errors"
-                grep -oP "(4..|5..)(?= \d+)" "$log_file" | uniq -c
+                echo "$log_file" | grep -oP "(4..|5..)(?= \d+)" | uniq -c
             } | awk '{ print $2, $1 }' | column -t
         fi
     fi
 }
 
 for i in "${log_files[@]}"; do
-    result=$(analyze_logs "$i" "$date")
+    result=$(analyze_logs "$i")
     report+="$result"$'\n\n'
 done
 
